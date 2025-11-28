@@ -1,9 +1,9 @@
-use actix_web::{HttpRequest, Result, web};
+use crate::middleware::JwtClaims;
+use actix_web::{Result, web};
 use db::Store;
 use db::models::user::{CreateUserRequest, GetUserRequest, GetUserResponse};
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use jsonwebtoken::{EncodingKey, Header,encode};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 #[derive(Serialize, Deserialize)]
 pub struct SignInResponse {
@@ -25,7 +25,7 @@ impl Claims {
     pub fn new(sub: String) -> Self {
         Self {
             sub,
-            exp: 1000000000,
+            exp: 100000000000000000,
         }
     }
 }
@@ -63,40 +63,13 @@ pub async fn sign_in(
     Ok(web::Json(SignInResponse { token }))
 }
 
-pub async fn me(data: web::Data<Store>, request: HttpRequest) -> Result<web::Json<MeResponse>> {
+pub async fn get_user(data: web::Data<Store>, claims: JwtClaims) -> Result<web::Json<MeResponse>> {
     let store = data.into_inner();
-    let auth_header = request
-        .headers()
-        .get("Authorization")
-        .ok_or_else(|| actix_web::error::ErrorUnauthorized("Missing Authorization header"))?
-        .to_str()
-        .map_err(|_| actix_web::error::ErrorUnauthorized("Invalid Header Encoding"))?;
-    let token = auth_header
-        .strip_prefix("Bearer")
-        .unwrap_or(auth_header)
-        .trim();
-    if token.is_empty() {
-        return Err(actix_web::error::ErrorUnauthorized("Empty Token"));
-    }
-
-    let secret = env::var("SECRET_KEY")
-        .map_err(|_| actix_web::error::ErrorInternalServerError("Missing Secret Key"))?;
-
-    let token_data = decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
-    )
-    .map_err(|_| actix_web::error::ErrorUnauthorized("Invalid or Expired Token"))?;
-
-    let user_id = Uuid::parse_str(&token_data.claims.sub)
-        .map_err(|_| actix_web::error::ErrorUnauthorized("Invalid User id in token"))?;
-
     let user = store
-        .get_user_by_id(user_id)
+        .get_user_by_id(claims.0.sub)
         .await
-        .map_err(|e| actix_web::error::ErrorForbidden(e.to_string()))?;
-    let username = user.user.username;
-
-    Ok(web::Json(MeResponse { username }))
+        .map_err(|e| actix_web::error::ErrorInternalServerError(e.to_string()))?;
+    Ok(web::Json(MeResponse {
+        username: user.user.username,
+    }))
 }
