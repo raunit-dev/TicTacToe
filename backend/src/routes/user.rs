@@ -30,7 +30,7 @@ impl Claims {
     }
 }
 
-// create_user is equivalent to sign_in
+// create_user is equivalent to sign_up
 pub async fn create_user(
     data: web::Data<Store>,
     request: web::Json<CreateUserRequest>,
@@ -73,3 +73,4 @@ pub async fn get_user(data: web::Data<Store>, claims: JwtClaims) -> Result<web::
         username: user.user.username,
     }))
 }
+
