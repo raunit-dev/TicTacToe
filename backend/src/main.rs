@@ -15,12 +15,12 @@ async fn main() -> Result<()> {
                 .service(web::resource("/signup").route(web::post().to(create_user)))
                 .service(web::resource("/signin").route(web::post().to(sign_in)))
                 .service(web::resource("/me").route(web::get().to(get_user)))
-                .service(web::resource("/create_room").route(web::post().to(create_room)))
-                .service(web::resource("/rooms").route(web::get().to(rooms)))
-                .service(web::resource("/join_game").route(web::post().to(join_room)))
-                .service(web::resource("/get_game_history").route(web::get().to(get_game_history)))
-                .service(web::resource("/game/:gameId").route(web::get().to(game)))
-                .service(web::resource("/stats").route(web::get().to(stats))),
+                // .service(web::resource("/create_room").route(web::post().to(create_room)))
+                // .service(web::resource("/rooms").route(web::get().to(rooms)))
+                // .service(web::resource("/join_game").route(web::post().to(join_room)))
+                // .service(web::resource("/get_game_history").route(web::get().to(get_game_history)))
+                // .service(web::resource("/game/:gameId").route(web::get().to(game)))
+                // .service(web::resource("/stats").route(web::get().to(stats))),
         )
     })
     .bind("0.0.0.0:8080")?

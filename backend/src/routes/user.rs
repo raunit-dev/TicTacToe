@@ -2,7 +2,7 @@ use crate::middleware::JwtClaims;
 use actix_web::{Result, web};
 use db::Store;
 use db::models::user::{CreateUserRequest, GetUserRequest, GetUserResponse};
-use jsonwebtoken::{EncodingKey, Header,encode};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -34,7 +34,7 @@ impl Claims {
 pub async fn create_user(
     data: web::Data<Store>,
     request: web::Json<CreateUserRequest>,
-) -> Result<web::Json<GetUserResponse>> {
+) -> Result<web::Json<GetUserResponse>, actix_web::error::Error> {
     let store = data.into_inner();
     let user = store
         .create_user(request.into_inner())
@@ -44,9 +44,9 @@ pub async fn create_user(
 }
 
 pub async fn sign_in(
-    data: web::Data<Store>,
-    request: web::Json<CreateUserRequest>,
-) -> Result<web::Json<SignInResponse>> {
+    data: web::Data<Store>, //query the database and get something from there
+    request: web::Json<CreateUserRequest>, //web::Json<> its an middleware
+) -> Result<web::Json<SignInResponse>, actix_web::error::Error> {
     let store = data.into_inner();
     let user = store
         .get_user(GetUserRequest {
@@ -63,7 +63,10 @@ pub async fn sign_in(
     Ok(web::Json(SignInResponse { token }))
 }
 
-pub async fn get_user(data: web::Data<Store>, claims: JwtClaims) -> Result<web::Json<MeResponse>> {
+pub async fn get_user(
+    data: web::Data<Store>,
+    claims: JwtClaims,
+) -> Result<web::Json<MeResponse>, actix_web::error::Error> {
     let store = data.into_inner();
     let user = store
         .get_user_by_id(claims.0.sub)
@@ -73,4 +76,3 @@ pub async fn get_user(data: web::Data<Store>, claims: JwtClaims) -> Result<web::
         username: user.user.username,
     }))
 }
-
