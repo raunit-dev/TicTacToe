@@ -1,15 +1,11 @@
-use actix_web::{HttpRequest, HttpServer, rt, web, App};
-use actix_ws::Message;
+use actix_web::{HttpServer,App,web,rt,HttpResponse,HttpRequest};
+use actix_web::error::Error;
+use actix_ws::{Message};
 
-async fn ws_handler(request: HttpRequest,body: web::Payload) -> Result<actix_web::HttpResponse, actix_web::error::Error> {
-  let (response, mut session, mut stream) = actix_ws::handle(&request, body).map_err(|e| actix_web::error::ErrorInternalServerError(e.to_string()))?;
-   
-  rt::spawn(async move { //imp not here
-    // rt::spawn -> this spawn a task(not a thread) that keeps checking if
-    // there is an incoming message 
-    while let Some(message) = stream.recv().await {
-        // when awaiting, this task yeilds the threads 
-        // thread can handle other tasks while waiting
+async fn ws_handler(req: HttpRequest, body: web::Payload) -> Result<HttpResponse,Error> {
+   let (response,mut session,mut stream) = actix_ws::handle(&req, body).unwrap();
+   rt::spawn(async move {
+      while let Some(message) = stream.recv().await {
         match message.unwrap() {
             Message::Ping(data) => {
                 let _ = session.pong(&data).await;
@@ -17,25 +13,20 @@ async fn ws_handler(request: HttpRequest,body: web::Payload) -> Result<actix_web
             Message::Text(message) => {
                 let _ = session.text(message).await;
             }
-
-            _=> {
+            _ => {
 
             }
         }
-    }
-  });
-
-  Ok(response)
-
+      }
+   });
+   Ok(response)
 }
-
-// not here actix_web::main creates a multi-threaded runtime with 4 worker threads (by default, based on CPU cores)
 
 #[actix_web::main]
 async fn main() {
     let _ = HttpServer::new(|| {
         App::new()
-        .route("/ws", web::get().to(ws_handler))
+            .route("/ws", web::get().to(ws_handler))
     })
     .bind("0.0.0.0:3000")
     .unwrap()
